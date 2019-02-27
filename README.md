@@ -26,4 +26,24 @@
 
     **Note : Use of this system is limited to users who have been properly authorised by the School Supercomputing Laboratory. Unauthorised users must disconnect immediately.**
 
+3. Tips on Shaheen
 
+    `https://www.hpc.kaust.edu.sa/tip`
+
+    You will find many tips here for your easy life.
+
+4. File stripe
+
+    ```
+    lfs setstripe --count [stripe-count] filename/directory
+    ```
+
+    By default files on Shaheen has stripe `1`, which is good if you don't share the same file for many processes or your file is small enough.
+
+    How to compute stripe count : 
+    
+        1. if the file is 90GB, the square root is 9.5, so use at least 9
+
+        2. if using 64 MPI processes for parallel I/O, use stripe count less than 64
+
+        3. maximum stripe count on Shaheen-II is 144
