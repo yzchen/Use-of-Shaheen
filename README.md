@@ -1,5 +1,10 @@
 ## Secrets of Shaheen
 
+Some of following rules are applied to [Shaheen-II](https://www.hpc.kaust.edu.sa/content/shaheen-ii) only,
+some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
+
+### Shaheen specific
+
 1. Additional login node
 
     ```
@@ -26,13 +31,16 @@
 
     **Note : Use of this system is limited to users who have been properly authorised by the School Supercomputing Laboratory. Unauthorised users must disconnect immediately.**
 
-3. Tips on Shaheen
+3. Tips on Shaheen (Many of these tips are about linux commands which can be used in all other linux systems)
 
     `https://www.hpc.kaust.edu.sa/tip`
 
     You will find many tips here for your easy life.
 
-4. File stripe
+
+### Cray applicable
+
+1. File stripe (If you use lustre file system)
 
     ```
     lfs setstripe --count [stripe-count] filename/directory
@@ -48,7 +56,7 @@
 
         3. maximum stripe count on Shaheen-II is 144
 
-5. How to get full allocated node list
+2. How to get full allocated node list
 
     Usually when one requests several nodes, inside the code, `$SLURM_NNODES` and `$SLURM_NODELIST` are set to proper values, for example :
 
@@ -73,7 +81,7 @@
     nid00200
     ```
 
-6. Use `mpiexec.hydra` as usual
+3. Use `mpiexec.hydra` as usual
 
     Sometimes you don't want to launch your job through `srun`, you want to run it with your own specified openmpi or intel ompi,
     however, with these launch managers, you can **not** run them as following :
@@ -92,7 +100,7 @@
 
     reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra)
 
-7. MPI program get stuck on Shaheen
+4. MPI program get stuck on Shaheen
 
     I faces an issue that when I requested large number of compute nodes like 256, my program tends to get stuck during executing without any reasons, logs or erros.
     And this is somehow random in my case, everytime gets stuck at different point.
