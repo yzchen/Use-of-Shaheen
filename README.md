@@ -40,8 +40,8 @@
 
     By default files on Shaheen has stripe `1`, which is good if you don't share the same file for many processes or your file is small enough.
 
-    How to compute stripe count : 
-    
+    How to compute stripe count :
+
         1. if the file is 90GB, the square root is 9.5, so use at least 9
 
         2. if using 64 MPI processes for parallel I/O, use stripe count less than 64
@@ -53,22 +53,56 @@
     Usually when one requests several nodes, inside the code, `$SLURM_NNODES` and `$SLURM_NODELIST` are set to proper values, for example :
 
     ```
-    cheny0l@cdl2:/project/k1341/caffe/tuning/scripts> srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l 
+    cheny0l@cdl2:/project/k1341/caffe/tuning/scripts> srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l
 
-    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NNODES 
+    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NNODES
     2
 
-    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NODELIST 
+    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NODELIST
     nid00[191,200]
 
     ```
 
     Actually `$SLURM_NODELIST` is in compressed version, which is not good for MPI program.
-    This can be a problem when you need to run program without `srun` because apparently `srun` can resolve this issue.
-    If eventually you need expanded nodelist, try following :
+    This can be a problem when you need to run program without `srun` (apparently this compressed format is designed for slurm system).
+    If you need expanded nodelist, try following :
 
     ```
     cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> scontrol show hostnames $SLURM_NODELIST
     nid00191
     nid00200
     ```
+
+6. Use `mpiexec.hydra` as usual
+
+    Sometimes you don't want to launch your job through `srun`, you want to run it with your own specified openmpi or intel ompi,
+    however, with these launch managers, you can **not** run them as following :
+
+    ```
+    mpiexec.hydra -host nid00008 -n 1 ./a.out
+    ```
+
+    if you do, you will end up with error like `Connection to nid00008 closed by remote host` or `Permission denied`.
+
+    But you do actually want to specify hosts by yourself or by your program, you can run :
+
+    ```
+    mpiexec.hydra -bootstrap slurm -host nid00008 -n 1 ./a.out
+    ```
+
+    reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra)
+
+7. MPI program get stuck on Shaheen
+
+    I faces an issue that when I requested large number of compute nodes like 256, my program tends to get stuck during executing without any reasons, logs or erros.
+    And this is somehow random in my case, everytime gets stuck at different point.
+
+    If you use `cray-mpich`, you can simply increase the MPI buffer size and number of buffers :
+
+    ```
+    export MPICH_GNI_MAX_EAGER_MSG_SIZE=131072
+    export MPICH_GNI_NUM_BUFS=128
+    ```
+
+    For MPICH_GNI_MAX_EAGER_MSG_SIZE, `131072` is already maximum value you can get;
+    for MPICH_GNI_NUM_BUFS, default value is `64`, I didn't find any limit about this term, you should set it based on your memory limits.
