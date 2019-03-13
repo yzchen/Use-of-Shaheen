@@ -47,3 +47,28 @@
         2. if using 64 MPI processes for parallel I/O, use stripe count less than 64
 
         3. maximum stripe count on Shaheen-II is 144
+
+5. How to get full allocated node list
+
+    Usually when one requests several nodes, inside the code, `$SLURM_NNODES` and `$SLURM_NODELIST` are set to proper values, for example :
+
+    ```
+    cheny0l@cdl2:/project/k1341/caffe/tuning/scripts> srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l 
+
+    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NNODES 
+    2
+
+    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NODELIST 
+    nid00[191,200]
+
+    ```
+
+    Actually `$SLURM_NODELIST` is in compressed version, which is not good for MPI program.
+    This can be a problem when you need to run program without `srun` because apparently `srun` can resolve this issue.
+    If eventually you need expanded nodelist, try following :
+
+    ```
+    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> scontrol show hostnames $SLURM_NODELIST
+    nid00191
+    nid00200
+    ```
