@@ -37,6 +37,23 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
 
     You will find many tips here for your easy life.
 
+4. Some problems of Shaheen currently
+
+    - module `openmpi2`, `openmpi3` and `openmpi4` are unavaible even it's in the module list, when you run :
+        ```
+        module load openmpi3
+        mpicc
+        ```
+
+        you will get `Illegal instruction`, maybe it's a bug in dependent module `xpmem`, I don't know the details
+
+    - module `hdf5` doesn't have proper INCLUDE PATH settings, after loaded `hdf5` module, it will set environment variable `INCLUDE`,
+        but actually this is not one of PATHs that can be used by compiler system. So if you want to compile your program with `hdf5`,
+        you need to set (`CPATH`) or (`C_INCLUDE_PATH` and `CPP_INCLUDE_PATH`) with the value of `INCLUDE`.
+
+    - some modules set only one of `LIBRARY_PATH` and `LD_LIBRARY_PATH`, so sometimes your compilation will fail with some linking errors,
+        again I had an issue with `hdf5`, it only set `LD_LIBRARY_PATH`, after I set `LIBRARY_PATH` manually, I got it right. 
+        That means sometimes you need to make sure you have both paths.
 
 ### Cray applicable
 
@@ -61,12 +78,12 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
     Usually when one requests several nodes, inside the code, `$SLURM_NNODES` and `$SLURM_NODELIST` are set to proper values, for example :
 
     ```
-    cheny0l@cdl2:/project/k1341/caffe/tuning/scripts> srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l
+    > srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l
 
-    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NNODES
+    > echo $SLURM_NNODES
     2
 
-    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> echo $SLURM_NODELIST
+    > echo $SLURM_NODELIST
     nid00[191,200]
 
     ```
@@ -76,7 +93,7 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
     If you need expanded nodelist, try following :
 
     ```
-    cheny0l@nid00191:/project/k1341/caffe/tuning/scripts> scontrol show hostnames $SLURM_NODELIST
+    > scontrol show hostnames $SLURM_NODELIST
     nid00191
     nid00200
     ```
@@ -98,7 +115,7 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
     mpiexec.hydra -bootstrap slurm -host nid00008 -n 1 ./a.out
     ```
 
-    reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra)
+    reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra) and [mpi_environment_reference](https://software.intel.com/en-us/mpi-developer-reference-linux-hydra-environment-variables)
 
 4. MPI program get stuck on Shaheen
 
@@ -114,3 +131,5 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
 
     For MPICH_GNI_MAX_EAGER_MSG_SIZE, `131072` is already maximum value you can get;
     for MPICH_GNI_NUM_BUFS, default value is `64`, I didn't find any limit about this term, you should set it based on your memory limits.
+
+    reference : [MPI Optimization](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/HPCSAUDI17/mpi_optimization.pdf)
