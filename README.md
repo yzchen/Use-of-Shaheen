@@ -35,7 +35,7 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
 
     `https://www.hpc.kaust.edu.sa/tip`
 
-    You will find many tips here for your easy life.
+    You will find many tips which are very helpful here.
 
 4. Some problems of Shaheen currently
 
@@ -133,3 +133,44 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
     for MPICH_GNI_NUM_BUFS, default value is `64`, I didn't find any limit about this term, you should set it based on your memory limits.
 
     reference : [MPI Optimization](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/HPCSAUDI17/mpi_optimization.pdf)
+
+5. Burst Buffer (Enhancement of 1: File stripe)
+
+    Burst buffer is supported for fast data access, indeed it's SSD instead of normal disk drive.
+
+    Once you have access to burst buffer, you can create a temporary buffer for your data which only exsits only for one job submission,
+    or you can create a persistent buffer, this will exist forever(generally, it's not guaranteed), you can use it in many jobs.
+
+    How to create a persistent buffer and copy(don't move, it's better to have a copy on normal disk) your data to that buffer:
+
+    1. Create a persistent buffer, find a place to keep your burst buffer config file, I use `/scratch/username/.burst`,
+
+        ```
+        echo "#BB create_persistent name=testData capacity=500GB access_mode=striped type=scratch" >> /scratch/username/.burst/persist.conf
+
+        salloc -N 1 -A k1210 -t 00:3:00 -p debug --bbf=/scratch/username/.burst/persist.conf
+        ```
+
+        Once you get allocated, you will have your own persistent buffer
+
+    2. Copy your local data to persistent buffer (I copied a directory, file is also accepted),
+
+        ```
+        echo "#DW persistentdw name=testData" >> /scratch/username/.burst/datamove.conf
+        echo "#DW stage_in source=/local/data/path/ destination=$DW_PERSISTENT_STRIPED_testData/ type=directory" >> /scratch/username/.burst/datamove.conf
+
+        salloc -N 1 -A k1210 -t 00:3:00 -p debug --bbf=/scratch/username/.burst/datamove.conf
+        ```
+
+        If your data is large, then you will pend for some time for data copying, once your job is started, that means data will be ready for you.
+
+        Then change your codes or applications to access data from `$DW_PERSISTENT_STRIPED_testData`, this will be faster.
+
+    3. Use it in following jobs
+
+        add following to your job script, below `#SBATCH` commands
+
+        ```
+        #DW persistentdw name=testData
+        echo $DW_PERSISTENT_STRIPED_testData
+        ```
