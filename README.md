@@ -115,11 +115,13 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
     mpiexec.hydra -bootstrap slurm -host nid00008 -n 1 ./a.out
     ```
 
+    It uses the `srun` command rather than the default ssh based method to launch the remote Hydra PM service processes.
+
     reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra) and [mpi_environment_reference](https://software.intel.com/en-us/mpi-developer-reference-linux-hydra-environment-variables)
 
-4. MPI program get stuck on Shaheen
+4. MPI program get stuck on Shaheen(Usually happens when too many nodes used at the same time)
 
-    I faces an issue that when I requested large number of compute nodes like 256, my program tends to get stuck during executing without any reasons, logs or erros.
+    I faced an issue that when I requested large number of compute nodes like 256, my program tends to get stuck during executing without any reasons, logs or erros.
     And this is somehow random in my case, everytime gets stuck at different point.
 
     If you use `cray-mpich`, you can simply increase the MPI buffer size and number of buffers :
@@ -133,6 +135,22 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
     for MPICH_GNI_NUM_BUFS, default value is `64`, I didn't find any limit about this term, you should set it based on your memory limits.
 
     reference : [MPI Optimization](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/HPCSAUDI17/mpi_optimization.pdf)
+
+    If you are using Intel MPI(Hydra PM), can set environment variables :
+
+    ```
+    export I_MPI_SHM_CELL_FWD_SIZE=128K
+    export I_MPI_SHM_CELL_BWD_SIZE=128K
+    export I_MPI_SHM_CELL_EXT_SIZE=128K
+    ```
+
+    In addition, 
+
+    ```
+    export I_MPI_SHM_CELL_FWD_NUM=16
+    export I_MPI_SHM_CELL_BWD_NUM=16
+    export I_MPI_SHM_CELL_EXT_NUM_TOTAL=8K
+    ```
 
 5. Burst Buffer (Enhancement of 1: File stripe)
 
