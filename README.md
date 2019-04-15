@@ -1,7 +1,7 @@
 ## Programming Guide for Shaheen
 
 Some of following rules are applied to [Shaheen-II](https://www.hpc.kaust.edu.sa/content/shaheen-ii) only,
-some can be used in all [Cray](https://www.cray.com/) HPC systems.
+some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm management systems.
 
 ### Shaheen specific
 
@@ -55,7 +55,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems.
         again I had an issue with `hdf5`, it only set `LD_LIBRARY_PATH`, after I set `LIBRARY_PATH` manually, I got it right. 
         That means sometimes you need to make sure you have both paths.
 
-### Cray applicable
+### Cray or Slurm applicable
 
 1. File stripe (If you use lustre file system)
 
@@ -234,3 +234,23 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems.
 
     -I/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/include -I/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/include -I/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/include -I/opt/cray/alps/6.6.43-6.0.7.0_26.4__ga796da3.ari/include -I/opt/cray/xpmem/2.2.15-6.0.7.1_5.11__g7549d06.ari/include -I/opt/cray/gni-headers/5.0.12.0-6.0.7.0_24.1__g3b1768f.ari/include -I/opt/cray/pe/pmi/5.0.13/include -I/opt/cray/ugni/6.0.14.0-6.0.7.0_23.1__gea11d3d.ari/include -I/opt/cray/udreg/2.3.2-6.0.7.0_33.18__g5196236.ari/include -I/opt/cray/wlm_detect/1.3.3-6.0.7.0_47.2__g7109084.ari/include -I/opt/cray/krca/2.2.4-6.0.7.1_5.42__g8505b97.ari/include -I/opt/cray-hss-devel/8.0.0/include -L/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/lib64 -L/opt/cray/pe/atp/2.1.1/libApp -L/lib64 -Wl,--no-as-needed,-lAtpSigHandler,-lAtpSigHCommData -Wl,--undefined=_ATP_Data_Globals -Wl,--undefined=__atpHandlerInstall -lrca -lz -Wl,--as-needed,-lsci_intel_mpi,--no-as-needed -Wl,--as-needed,-lsci_intel,--no-as-needed -Wl,--as-needed,-lmpich_intel,--no-as-needed -Wl,--as-needed,-lmpichcxx_intel,--no-as-needed
     ```
+
+7. Check out who is the most annoying guy on Shaheen
+
+    Sometimes you submit a small job but it's pending for very long time, in that case it's very annoying.
+    So you want to know who occupied most compute nodes on Shaheen.
+
+    ```
+    squeue | less
+    ```
+
+    Through above command you can see status of all submitted jobs, some are running, some are pending.
+    You noticed one guy who has one job array contains one thousand jobs, each needs to run for 24 hours.
+    You have username of that guy but no other information, but username on Shaheen is not enough to find a person.
+
+    ```
+    finger username
+    ```
+
+    However, `finger` command can give actual full name of given user, so you can send an email to him to complain about his jobs :)
+
