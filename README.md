@@ -1,7 +1,7 @@
-## Secrets of Shaheen
+## Programming Guide for Shaheen
 
 Some of following rules are applied to [Shaheen-II](https://www.hpc.kaust.edu.sa/content/shaheen-ii) only,
-some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
+some can be used in all [Cray](https://www.cray.com/) HPC systems.
 
 ### Shaheen specific
 
@@ -178,7 +178,7 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
         ```
         echo "#BB create_persistent name=testData capacity=500GB access_mode=striped type=scratch" >> /scratch/username/.burst/persist.conf
 
-        salloc -N 1 -A k1210 -t 00:3:00 -p debug --bbf=/scratch/username/.burst/persist.conf
+        salloc -N 0 --bbf=/scratch/username/.burst/persist.conf
         ```
 
         Once you get allocated, you will have your own persistent buffer
@@ -189,14 +189,23 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
         echo "#DW persistentdw name=testData" >> /scratch/username/.burst/datamove.conf
         echo "#DW stage_in source=/local/data/path/ destination=$DW_PERSISTENT_STRIPED_testData/ type=directory" >> /scratch/username/.burst/datamove.conf
 
-        salloc -N 1 -A k1210 -t 00:3:00 -p debug --bbf=/scratch/username/.burst/datamove.conf
+        salloc -N 0 --bbf=/scratch/username/.burst/datamove.conf
         ```
 
         If your data is large, then you will pend for some time for data copying, once your job is started, that means data will be ready for you.
 
         Then change your codes or applications to access data from `$DW_PERSISTENT_STRIPED_testData`, this will be faster.
 
-    3. Use it in following jobs
+    3. Destroy staged data in burst buffer
+
+        ```
+        echo "#BB destroy_persistent name=testData" >> /scratch/username/.burst/destroy.conf
+        salloc -N 0 --bbf=/scratch/username/.burst/destroy.conf
+        ```
+
+    Note that you can request `0` work nodes for burst buffer configurations.
+
+    4. Use it in following jobs
 
         add following to your job script, below `#SBATCH` commands
 
@@ -205,18 +214,20 @@ some of them can be used in all [Cray](https://www.cray.com/) HPC systems.
         echo $DW_PERSISTENT_STRIPED_testData
         ```
 
+        make sure you access your data through this environment variable `DW_PERSISTENT_STRIPED_dataName`, because absolute path will change for different runs.
+
 6. `cc` and `CC` wrapper on Cray
 
     `cc` is c wrapper, `CC` is cpp wrapper, as you may change your programming environment(3 PEs totally, PrgEnv-cray, PrgEnv-gnu, PrgEnv-intel), flags inside `cc`/`CC` may differ.
     It's good to know what's inside generally.
 
     Usually with `mpicc`/`mpicxx` we can do `mpicc --show`, with `cc`/`CC` you should use `cc --cray-print-opts=all`
-    
+
     Following is the output in `PrgEnv-intel`:
 
     ```
     cc --cray-print-opts=all
-    
+
     -I/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/include -I/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/include -I/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/include -I/opt/cray/alps/6.6.43-6.0.7.0_26.4__ga796da3.ari/include -I/opt/cray/xpmem/2.2.15-6.0.7.1_5.11__g7549d06.ari/include -I/opt/cray/gni-headers/5.0.12.0-6.0.7.0_24.1__g3b1768f.ari/include -I/opt/cray/pe/pmi/5.0.13/include -I/opt/cray/ugni/6.0.14.0-6.0.7.0_23.1__gea11d3d.ari/include -I/opt/cray/udreg/2.3.2-6.0.7.0_33.18__g5196236.ari/include -I/opt/cray/wlm_detect/1.3.3-6.0.7.0_47.2__g7109084.ari/include -I/opt/cray/krca/2.2.4-6.0.7.1_5.42__g8505b97.ari/include -I/opt/cray-hss-devel/8.0.0/include -L/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/lib64 -L/opt/cray/pe/atp/2.1.1/libApp -L/lib64 -Wl,--no-as-needed,-lAtpSigHandler,-lAtpSigHCommData -Wl,--undefined=_ATP_Data_Globals -Wl,--undefined=__atpHandlerInstall -lrca -lz -Wl,--as-needed,-lsci_intel_mpi,--no-as-needed -Wl,--as-needed,-lsci_intel,--no-as-needed -Wl,--as-needed,-lmpich_intel,--no-as-needed
 
     CC --cray-print-opts=all
