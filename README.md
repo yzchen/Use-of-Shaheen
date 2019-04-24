@@ -254,3 +254,60 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
     However, `finger` command can give actual full name of given user, so you can send an email to him to complain about his jobs :)
 
+8. Make your own modules, make your own environments
+
+    Usually when you need to do some programming staff, you need specific compilers, headers, libbraries and so on. 
+    You can execute several `module load xxx` to load all modules, but another solution is to build a specific module that will do all these things for you.
+
+    a. Find a good place, like `/scratch/username/.usr/local/share/modulefiles`, create a file,
+
+    ```
+    cd /scratch/username/.usr/local/share/modulefiles
+    touch common
+ 
+    echo "#%Module" >> common
+    echo "" >> common
+    echo "module swap PrgEnv-cray/6.0.4 PrgEnv-intel" >> common
+    echo "module load cmake/3.10.2" >> common
+    echo "module load hdf5/1.8.21" >> common
+   ```
+
+   The first line in file `common` will indicate this is a module file. 
+   You can put all `module load` commands in `common` file to let it load all dependencies you want.
+
+    b. In order to use this new module, run following commands:
+
+    ```
+    module use -a /scratch/username/.usr/local/share/modulefiles
+    module load common
+    ```
+
+    Now all modules will be loaded.
+
+    c. Do other settings, not only just loading more modules, new environment variables and some paths can be set in this modules.
+    We can append following `common` file or create a new module file just to have a better structure.
+
+    ```
+    cd /scratch/cheny0l/.usr/local/share/modulefiles
+    mkdir depends
+    cd depends
+    # file name will denote the version number
+    touch 1.0
+ 
+    echo "#%Module" >> 1.0
+    echo "" >> 1.0
+ 
+    echo "set     root            /scratch/username/.usr/local" >> 1.0
+    echo "prepend-path    PATH            $root/bin" >> 1.0
+    echo "prepend-path    CPLUS_INCLUDE_PATH  $root/include" >> 1.0
+    echo "prepend-path    C_INCLUDE_PATH      $root/include" >> 1.0
+    echo "prepend-path    LD_LIBRARY_PATH     $root/lib:$root/lib64" >> 1.0
+    echo "prepend-path    LIBRARY_PATH        $root/lib:$root/lib64" >> 1.0
+    echo "prepend-path    MANPATH         $root/share" >> 1.0
+ 
+    cd ../
+    # append above file to `common` module
+    echo "module load depends/1.0" >> 1.0
+    ```
+
+    Now when commands in `b` are executed, not only new modules will be loaded, but also you can have all above paths.
