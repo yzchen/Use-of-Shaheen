@@ -55,6 +55,26 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
         again I had an issue with `hdf5`, it only set `LD_LIBRARY_PATH`, after I set `LIBRARY_PATH` manually, I got it right. 
         That means sometimes you need to make sure you have both paths.
 
+5. Disk speed on Shaheen
+
+    a. From login node (`cdl` nodes)
+
+    ```
+    time sh -c "dd if=/dev/zero of=/disk/path/test bs=64k count=125000 && sync"
+    ```
+
+    | Partition       | IO bandwidth    |
+    | :-------------: | :--------------:|
+    | home            | 627 MB/s        |
+    | project         | 1.0 GB/s        |
+    | scratch         | 1.0 GB/s        |
+
+    This benchmark is only for squential read/write, and the result for `home` is not stable maybe the reason of cache.
+    Above table tells you if you have scripts to pre-process your data (awk, sed on some files that are not so small), you should use `scratch` or `project` partition,
+    `home` is slower than the other two.
+
+    When submiting jobs with slurm system on Shaheen, `/scratch/username` will be home for jobs, not `/home/username` anymore.
+
 ### Cray or Slurm applicable
 
 1. File stripe (If you use lustre file system)
