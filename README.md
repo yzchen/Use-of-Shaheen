@@ -75,6 +75,23 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
     When submiting jobs with slurm system on Shaheen, `/scratch/username` will be home for jobs, not `/home/username` anymore.
 
+    b. From running node (by submitting jobs)
+
+    As said above, running nodes only see `scratch` other than `home`, but for running nodes burst buffer can be seen.
+
+    A simple [benchmark program](https://gist.github.com/yzchen/3d7905f380e9c7f6bff5b2d75f16cdb3) is run here to test disk read preformance, only C `read` function is used as it's almost the fastest in many cases.
+    Same file is put on different disk partition(`scratch`, `project` and `burst buffer`), run above program 20 times to get average bandwidth value:
+
+    | Partition       | IO bandwidth    |
+    | :-------------: | :--------------:|
+    | scratch         | 5774.57 MB/s    |
+    | project         | 6430.29 MB/s    |
+    | burst buffer    | 2625.95 MB/s    |
+
+    Generally, `project` partition is the fastest among this three, why `burst buffer` is not the fastest even it's SSD because it's striped, 
+    this means whole data is paritioned into several nodes(maybe 2 here), remote data fetch will slower the process.
+    However, here only squential read is benchmarked, stripped data is better for concurrent read, which is not shown here.
+
 ### Cray or Slurm applicable
 
 1. File stripe (If you use lustre file system)
