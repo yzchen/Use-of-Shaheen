@@ -79,17 +79,16 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
     As said above, running nodes only see `scratch` other than `home`, but for running nodes burst buffer can be seen.
 
-    A simple [benchmark program](https://gist.github.com/yzchen/3d7905f380e9c7f6bff5b2d75f16cdb3) is run here to test disk read preformance, only C `read` function is used as it's almost the fastest in many cases.
+    A simple [benchmark program](https://gist.github.com/yzchen/3d7905f380e9c7f6bff5b2d75f16cdb3) is run here to test disk read preformance, C `read` and `fread` are used.
     Same file is put on different disk partition(`scratch`, `project` and `burst buffer`), run above program 20 times to get average bandwidth value:
 
-    | Partition       | IO bandwidth    |
-    | :-------------: | :--------------:|
-    | scratch         | 5774.57 MB/s    |
-    | project         | 6430.29 MB/s    |
-    | burst buffer    | 2625.95 MB/s    |
+    | Partition       | read            | fread           |
+    | :-------------: | :--------------:| :--------------:|
+    | scratch         | 5865.97 MB/s    | 4287.21 MB/s    |
+    | project         | 6493.82 MB/s    | 4470.96 MB/s    |
+    | burst buffer    | 3388.2  MB/s    | 3241.89 MB/s    |
 
-    Generally, `project` partition is the fastest among this three, why `burst buffer` is not the fastest even it's SSD because it's striped, 
-    this means whole data is paritioned into several nodes(maybe 2 here), remote data fetch will slower the process.
+    Generally, `project` partition is the fastest among this three, why `burst buffer` is not the fastest even it's SSD(here even data is striped, by setting stripe size, still can obtain whole data on single burst buffer node).
     However, here only squential read is benchmarked, stripped data is better for concurrent read, which is not shown here.
 
 ### Cray or Slurm applicable
@@ -240,7 +239,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
         salloc -N 0 --bbf=/scratch/username/.burst/destroy.conf
         ```
 
-    Note that you can request `0` work nodes for burst buffer configurations.
+        Note that you can request `0` work nodes for burst buffer configurations.
 
     4. Use it in following jobs
 
@@ -251,7 +250,19 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
         echo $DW_PERSISTENT_STRIPED_testData
         ```
 
-        make sure you access your data through this environment variable `DW_PERSISTENT_STRIPED_dataName`, because absolute path will change for different runs.
+        make sure you access your data through this environment variable `DW_PERSISTENT_STRIPED_dataName`, because absolute path will change for different runs. Actually you can acess the data through the actual path, it changes for different jobs. On Shaheen, it follows following pattern:
+
+        ```
+        /var/opt/cray/dws/mounts/batch/{dataName}_{JOBID}_striped_scratch
+        ```
+    
+    Temporal burst buffer can also be used, it will only exist for current job. Access the data through `$DW_JOB_STRIPED`, or use follong pattern on Shaheen:
+
+    ```
+    /var/opt/cray/dws/mounts/batch/{JOBID}_striped_scratch
+    ```
+
+    By switching `pool=wlm_pool`(82GB) and `pool=sm_pool`(20.14GB), one can specify pool size for each BB node when in striped case. For example, when requesting a buffer with 40GB, with `wlm_pool` only one BB node is needed, but with `sm_pool` will get 2 nodes.
 
 6. `cc` and `CC` wrapper on Cray
 
