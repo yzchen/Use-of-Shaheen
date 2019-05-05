@@ -255,6 +255,8 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
         ```
         /var/opt/cray/dws/mounts/batch/{dataName}_{JOBID}_striped_scratch
         ```
+
+        you can obtain job id through `$SLURM_JOBID` environment variable.
     
     Temporal burst buffer can also be used, it will only exist for current job. Access the data through `$DW_JOB_STRIPED`, or use follong pattern on Shaheen:
 
@@ -359,3 +361,49 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     ```
 
     Now when commands in `b` are executed, not only new modules will be loaded, but also you can have all above paths.
+
+9. Profiling tools available on Cray system
+
+    Cray does provide a way to do program profiling, here I forget I/O profiling(`darshan`). Imagine you have a program and want to do profiling,
+
+    a. load proper modules, `perftools-lite` is a lite module for doing this, you don't need to do anything else with this module, just compile as normal.
+    but it has conflict with `darshan` module, so make sure you have removed it before using `perftools-lite`
+
+    ```
+    module unload darshan
+    module load perftools-lite
+    ```
+
+    b. compile program, remember to compile program with Cray compiler wrapper always
+
+    ```
+    CC examples.cc -o examples
+    ```
+
+    c. submit a job, once job is finished, you can find profiling output in output log file, and some other files for visulization
+
+    Of course there is also full module called `perftools`,
+
+    a. load modules as the same
+
+    ```
+    module unload darshan
+    module load perftools
+    ```
+
+    b. compile program, keep all `*.o` files
+
+    ```
+    CC -c examples.o examples.cc
+    CC -o exmaples examples.o
+    ```
+    
+    c. run one more build step, one more executable file `examples+pat` will be generated
+
+    ```
+    pat_build examples
+    ```
+
+    d. submit job with `examples+pat`, use `pat_report` to parse the output report, also some visulizations can be applied here
+
+    Detailed [exmaples and explanations](https://www.nersc.gov/users/software/performance-and-debugging-tools/craypat/)
