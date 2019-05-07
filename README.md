@@ -91,6 +91,29 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     Generally, `project` partition is the fastest among this three, why `burst buffer` is not the fastest even it's SSD(here even data is striped, by setting stripe size, still can obtain whole data on single burst buffer node).
     However, here only squential read is benchmarked, stripped data is better for concurrent read, which is not shown here.
 
+6. CTRL-UP/DOWN-Arrow history search
+
+    Shaheen has some specific keyboard bindings to make terminal command input easier. Maybe this is the feature of SUSE(Shaheen system: SUSE Linux Enterprise Server 12 SP3), but still it's a good thing for users.
+
+    On Shaheen's terminal, you can input some thing at first, then use keyboard bindings `CTRL-UP/DOWN-arrow` to search the partially matched command history.
+
+    For general Linux system, you can check `/etc/inputrc` to see system keyboard bindings. We can create user specific keyboard bindings by creating/appending a file `$HOME/.inputrc`.
+
+    Add following to the file:
+
+    ```
+    # mappings for UP-arrow and DOWN-arrow for history searching
+    "\e[1;5A": history-search-backward
+    "\e[1;5B": history-search-forward
+    "\e[5A": history-search-backward
+    "\e[5B": history-search-forward
+    "\e\e[A": history-search-backward
+    "\e\e[B": history-search-forward
+    ```
+
+    By doing so, you can do such searching with 'UP/DOWN-arrow'. For example, you type `git` at first, then type `UP-arrow`, you will have see history commands starting from `git`.
+    This is not exactly the same as features on Shaheen, but still it's useful.
+
 ### Cray or Slurm applicable
 
 1. File stripe (If you use lustre file system)
