@@ -289,6 +289,8 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
     By switching `pool=wlm_pool`(82GB) and `pool=sm_pool`(20.14GB), one can specify pool size for each BB node when in striped case. For example, when requesting a buffer with 40GB, with `wlm_pool` only one BB node is needed, but with `sm_pool` will get 2 nodes.
 
+    It seems users should specify the same project accout to operate on the burst buffer. I used new project account to create a persistent burst buffer, but with old project accout, it cannot be deleted.
+
 6. `cc` and `CC` wrapper on Cray
 
     `cc` is c wrapper, `CC` is cpp wrapper, as you may change your programming environment(3 PEs totally, PrgEnv-cray, PrgEnv-gnu, PrgEnv-intel), flags inside `cc`/`CC` may differ.
@@ -430,3 +432,60 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     d. submit job with `examples+pat`, use `pat_report` to parse the output report, also some visulizations can be applied here
 
     Detailed [exmaples and explanations](https://www.nersc.gov/users/software/performance-and-debugging-tools/craypat/)
+
+10. Dynamic linking on Cray system
+
+    On supercomputer login nodes and compute nodes are seperate, although they share the same environments.
+    Users compile their code on login nodes, then submit jobs to compute nodes. Therefore it's better to use static linking when compilation happens.
+    However, some applications do require shared libraries on the compute nodes(my experience is compiling mkldnn on Shaheen).
+
+    Two ways can address this situation:
+
+
+    a. set 'CRAYPE_LINK_TYPE' to `dynamic`
+
+    ```
+    export CRAYPE_LINK_TYPE=dynamic
+    cc -o test test.c
+    ```
+
+    b. use '-dynamic' flag during linking
+
+    ```
+    cc -dynamic -o test test.c
+    ```
+
+11. Some helper scripts with slurm job management system
+
+    a. watch a job with "JOBID  NAME    ST  TIME    NODES   START_TIME"
+
+    ```
+    watch -n 1 'squeue -u cheny0l -o "%.18i %.18j %.2t %.10M %.6D %S"'
+    ```
+
+    b. query old jobs
+
+    ```
+    sacct --starttime 2019-03-01 --format=jobid%15,jobname%30,partition,ntasks,alloccpus,elapsed%30,state%30,exitcode%30
+    ```
+
+    c. use 72hours partition if you are eligible, put in job scripts
+
+    ```
+    #SBATCH --partition=72hours
+    #SBATCH --qos=72hours
+    ```
+
+    d. general job header template
+
+    ```
+    #!/bin/bash
+    #SBATCH -A k1111
+    #SBATCH --nodes=16
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --exclusive
+    #SBATCH -J test
+    #SBATCH -o out.test
+    #SBATCH -e err.test
+    #SBATCH --time=30:00
+    ```
