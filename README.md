@@ -455,7 +455,44 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     cc -dynamic -o test test.c
     ```
 
-11. Some helper scripts with slurm job management system
+11. Decide when to run your job
+
+    - delay the schedule of your job
+
+    ```
+    sbatch --begin=2019-05-15T03:30:00 test.sh
+
+    sbatch --begin=now+1hour
+    ```
+
+    - add dependecy to current job
+
+    ```
+    sbatch test1.sh
+    >11111111 #jobid
+    sbatch --dependency=afterok:111111111 test2.sh
+    ```
+
+    Becasue `sbatch` command will return the jobid when there is no error, so in one scripts, one can do:
+
+    ```
+    #!/bin/bash
+
+    job1=$(sbatch test1.sh)
+    sbatch --dependency=afterok:$job1 test2.sh
+    ```
+
+    Genrally in Linux system, one script or command can also be delayed with `at` command:
+
+    ```
+    echo $(date) > $HOME/log | at 16:00
+    ```
+
+    Following command will execute `echo` command at certain time, here is `16:00`. `atq` can query upcoming jobs.
+
+    Running scripts repeatedly will require `crontab`, but it's a little tricky to configure it correct.
+
+12. Some helper scripts with slurm job management system
 
     a. watch a job with "JOBID  NAME    ST  TIME    NODES   START_TIME"
 
