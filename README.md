@@ -114,6 +114,23 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     By doing so, you can do such searching with 'UP/DOWN-arrow'. For example, you type `git` at first, then type `UP-arrow`, you will have see history commands starting from `git`.
     This is not exactly the same as features on Shaheen, but still it's useful.
 
+7. Container for HPC
+
+    Shaheen/Ibex now can support containers, [singularity](https://www.sylabs.io/docs/), which is designed for HPC scenario.
+
+    ```
+    module load singularity/3.0
+    singularity pull library://sylabsed/examples/lolcow
+    # after pull, ***.sif will be downloaded and it will be used for singularity loading
+    singularity shell lolcow_latest.sif
+    ```
+
+    Singularity is limited in many senses, for example it doesn't have a way to expose only specify path to container but all your path so your work path is still not clean.
+    It does provide seperate and clean running environment like docker for HPC users, but module management on HPC is somehow sufficient.
+    However container technology will enable users to build their own working environments.
+
+    Singularity hub: [here](https://cloud.sylabs.io/library)
+
 ### Cray or Slurm applicable
 
 1. File stripe (If you use lustre file system)
@@ -289,8 +306,14 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
     By switching `pool=wlm_pool`(82GB) and `pool=sm_pool`(20.14GB), one can specify pool size for each BB node when in striped case. For example, when requesting a buffer with 40GB, with `wlm_pool` only one BB node is needed, but with `sm_pool` will get 2 nodes.
 
+    On Shaheen there is only one pool(`wlm_pool`), and the granularity is `368GB` not `82GB`. This means requesting less than 368GB will put all the data into one burst buffer node.
+    **If you have data with size 128GB, and you want to spread your data over 64 burst buffer nodes, you need to request `64*397.44=25436GB` in configuration file `persist.conf`, by default the data will be splitted in round-robin mechanism**.
+    `397.44` here is not exactly `368` shown in granularity column, they have some relations inside but I don't know what it is, in real calculation `397.44` should be used.
+
     It seems users should specify the same project accout to operate on the burst buffer. I used new project account to create a persistent burst buffer, but with old project accout, it cannot be deleted.
 
+    Slide: [here](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/Shaheen_training/171107_IO/burst_buffer_training_november_2017.pdf)
+    
 6. `cc` and `CC` wrapper on Cray
 
     `cc` is c wrapper, `CC` is cpp wrapper, as you may change your programming environment(3 PEs totally, PrgEnv-cray, PrgEnv-gnu, PrgEnv-intel), flags inside `cc`/`CC` may differ.
