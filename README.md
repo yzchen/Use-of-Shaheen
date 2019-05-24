@@ -1,304 +1,332 @@
-## Programming Guide for Shaheen
+# Programming Guide for Shaheen
 
 Some of following rules are applied to [Shaheen-II](https://www.hpc.kaust.edu.sa/content/shaheen-ii) only,
 some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm management systems.
 
-### Shaheen specific
+---
 
-1. Additional login node
+## 1. Shaheen specific
 
+---
+
+#### Additional login node
+
+```
+ssh cdl5
+```
+
+`cdl5` is one additional login node, it's not public to users actually, but in some cases, if Shaheen login nodes(`cdl1-4`) are very busy(many people are doing some program compiling or pre-processing staff), go here and you will have a quiet machine.
+
+*Note : it's not a good idea to occupy this node for so long, it's forbidden to run jobs here!!!*
+
+---
+
+#### Additional testing rack
+
+```
+ssh osprey1
+ssh osprey2
+ssh osprey3
+
+ssh gateway3
+```
+
+Osprey is a 1 rack Cray XC40-AC system. You will find some new cpu bands like knl, kepler, run `sinfo`, the partition name is the cpu band name.
+
+And usually you have `gateway1-2` as gateway nodes, once you do `salloc`, you will go to one of this two nodes. Gateway3 is for Osprey, so it seems useless for general users.
+
+*Note : Use of this system is limited to users who have been properly authorised by the School Supercomputing Laboratory. Unauthorised users must disconnect immediately.*
+
+---
+
+#### Tips on Shaheen (Many of these tips are about linux commands which can be used in all other linux systems)
+
+`https://www.hpc.kaust.edu.sa/tip`
+
+You will find many tips which are very helpful here.
+
+---
+
+#### Some problems of Shaheen currently
+
+1. module `openmpi2`, `openmpi3` and `openmpi4` are unavaible even it's in the module list, when you run :
     ```
-    ssh cdl5
-    ```
-
-    `cdl5` is one additional login node, it's not public to users actually, but in some cases, if Shaheen login nodes(`cdl1-4`) are very busy(many people are doing some program compiling or pre-processing staff), go here and you will have a quiet machine.
-
-    **Note : it's not a good idea to occupy this node for so long, it's forbidden to run jobs here!!!**
-
-2. Additional testing rack
-
-    ```
-    ssh osprey1
-    ssh osprey2
-    ssh osprey3
-
-    ssh gateway3
-    ```
-
-    Osprey is a 1 rack Cray XC40-AC system. You will find some new cpu bands like knl, kepler, run `sinfo`, the partition name is the cpu band name.
-
-    And usually you have `gateway1-2` as gateway nodes, once you do `salloc`, you will go to one of this two nodes. Gateway3 is for Osprey, so it seems useless for general users.
-
-    **Note : Use of this system is limited to users who have been properly authorised by the School Supercomputing Laboratory. Unauthorised users must disconnect immediately.**
-
-3. Tips on Shaheen (Many of these tips are about linux commands which can be used in all other linux systems)
-
-    `https://www.hpc.kaust.edu.sa/tip`
-
-    You will find many tips which are very helpful here.
-
-4. Some problems of Shaheen currently
-
-    - module `openmpi2`, `openmpi3` and `openmpi4` are unavaible even it's in the module list, when you run :
-        ```
-        module load openmpi3
-        mpicc
-        ```
-
-        you will get `Illegal instruction`, maybe it's a bug in dependent module `xpmem`, I don't know the details
-
-    - module `hdf5` doesn't have proper INCLUDE PATH settings, after loaded `hdf5` module, it will set environment variable `INCLUDE`,
-        but actually this is not one of PATHs that can be used by compiler system. So if you want to compile your program with `hdf5`,
-        you need to set (`CPATH`) or (`C_INCLUDE_PATH` and `CPP_INCLUDE_PATH`) with the value of `INCLUDE`.
-
-    - some modules set only one of `LIBRARY_PATH` and `LD_LIBRARY_PATH`, so sometimes your compilation will fail with some linking errors,
-        again I had an issue with `hdf5`, it only set `LD_LIBRARY_PATH`, after I set `LIBRARY_PATH` manually, I got it right. 
-        That means sometimes you need to make sure you have both paths.
-
-5. Disk speed on Shaheen
-
-    a. From login node (`cdl` nodes)
-
-    ```
-    time sh -c "dd if=/dev/zero of=/disk/path/test bs=64k count=125000 && sync"
+    module load openmpi3
+    mpicc
     ```
 
-    | Partition       | IO bandwidth    |
-    | :-------------: | :--------------:|
-    | home            | 627 MB/s        |
-    | project         | 1.0 GB/s        |
-    | scratch         | 1.0 GB/s        |
+    you will get `Illegal instruction`, maybe it's a bug in dependent module `xpmem`, I don't know the details
 
-    This benchmark is only for squential read/write, and the result for `home` is not stable maybe the reason of cache.
-    Above table tells you if you have scripts to pre-process your data (awk, sed on some files that are not so small), you should use `scratch` or `project` partition,
-    `home` is slower than the other two.
+2. module `hdf5` doesn't have proper INCLUDE PATH settings, after loaded `hdf5` module, it will set environment variable `INCLUDE`,
+    but actually this is not one of PATHs that can be used by compiler system. So if you want to compile your program with `hdf5`,
+    you need to set (`CPATH`) or (`C_INCLUDE_PATH` and `CPP_INCLUDE_PATH`) with the value of `INCLUDE`.
 
-    When submiting jobs with slurm system on Shaheen, `/scratch/username` will be home for jobs, not `/home/username` anymore.
+3. some modules set only one of `LIBRARY_PATH` and `LD_LIBRARY_PATH`, so sometimes your compilation will fail with some linking errors,
+    again I had an issue with `hdf5`, it only set `LD_LIBRARY_PATH`, after I set `LIBRARY_PATH` manually, I got it right. 
+    That means sometimes you need to make sure you have both paths.
 
-    b. From running node (by submitting jobs)
+---
 
-    As said above, running nodes only see `scratch` other than `home`, but for running nodes burst buffer can be seen.
+#### Disk speed on Shaheen
 
-    A simple [benchmark program](https://gist.github.com/yzchen/3d7905f380e9c7f6bff5b2d75f16cdb3) is run here to test disk read preformance, C `read` and `fread` are used.
-    Same file is put on different disk partition(`scratch`, `project` and `burst buffer`), run above program 20 times to get average bandwidth value:
+a. From login node (`cdl` nodes)
 
-    | Partition       | read            | fread           |
-    | :-------------: | :--------------:| :--------------:|
-    | scratch         | 5865.97 MB/s    | 4287.21 MB/s    |
-    | project         | 6493.82 MB/s    | 4470.96 MB/s    |
-    | burst buffer    | 3388.2  MB/s    | 3241.89 MB/s    |
+```
+time sh -c "dd if=/dev/zero of=/disk/path/test bs=64k count=125000 && sync"
+```
 
-    Generally, `project` partition is the fastest among this three, why `burst buffer` is not the fastest even it's SSD(here even data is striped, by setting stripe size, still can obtain whole data on single burst buffer node).
-    However, here only squential read is benchmarked, stripped data is better for concurrent read, which is not shown here.
+| Partition       | IO bandwidth    |
+| :-------------: | :--------------:|
+| home            | 627 MB/s        |
+| project         | 1.0 GB/s        |
+| scratch         | 1.0 GB/s        |
 
-6. CTRL-UP/DOWN-Arrow history search
+This benchmark is only for squential read/write, and the result for `home` is not stable maybe the reason of cache.
+Above table tells you if you have scripts to pre-process your data (awk, sed on some files that are not so small), you should use `scratch` or `project` partition,
+`home` is slower than the other two.
 
-    Shaheen has some specific keyboard bindings to make terminal command input easier. Maybe this is the feature of SUSE(Shaheen system: SUSE Linux Enterprise Server 12 SP3), but still it's a good thing for users.
+When submiting jobs with slurm system on Shaheen, `/scratch/username` will be home for jobs, not `/home/username` anymore.
 
-    On Shaheen's terminal, you can input some thing at first, then use keyboard bindings `CTRL-UP/DOWN-arrow` to search the partially matched command history.
+b. From running node (by submitting jobs)
 
-    For general Linux system, you can check `/etc/inputrc` to see system keyboard bindings. We can create user specific keyboard bindings by creating/appending a file `$HOME/.inputrc`.
+As said above, running nodes only see `scratch` other than `home`, but for running nodes burst buffer can be seen.
 
-    Add following to the file:
+A simple [benchmark program](https://gist.github.com/yzchen/3d7905f380e9c7f6bff5b2d75f16cdb3) is run here to test disk read preformance, C `read` and `fread` are used.
+Same file is put on different disk partition(`scratch`, `project` and `burst buffer`), run above program 20 times to get average bandwidth value:
 
-    ```
-    # mappings for UP-arrow and DOWN-arrow for history searching
-    "\e[1;5A": history-search-backward
-    "\e[1;5B": history-search-forward
-    "\e[5A": history-search-backward
-    "\e[5B": history-search-forward
-    "\e\e[A": history-search-backward
-    "\e\e[B": history-search-forward
-    ```
+| Partition       | read            | fread           |
+| :-------------: | :--------------:| :--------------:|
+| scratch         | 5865.97 MB/s    | 4287.21 MB/s    |
+| project         | 6493.82 MB/s    | 4470.96 MB/s    |
+| burst buffer    | 3388.2  MB/s    | 3241.89 MB/s    |
 
-    By doing so, you can do such searching with 'UP/DOWN-arrow'. For example, you type `git` at first, then type `UP-arrow`, you will have see history commands starting from `git`.
-    This is not exactly the same as features on Shaheen, but still it's useful.
+Generally, `project` partition is the fastest among this three, why `burst buffer` is not the fastest even it's SSD(here even data is striped, by setting stripe size, still can obtain whole data on single burst buffer node).
+However, here only squential read is benchmarked, stripped data is better for concurrent read, which is not shown here.
 
-7. Container for HPC
+---
 
-    Shaheen/Ibex now can support containers, [singularity](https://www.sylabs.io/docs/), which is designed for HPC scenario.
+#### CTRL-UP/DOWN-Arrow history search
 
-    ```
-    module load singularity/3.0
-    singularity pull library://sylabsed/examples/lolcow
-    # after pull, ***.sif will be downloaded and it will be used for singularity loading
-    singularity shell lolcow_latest.sif
-    ```
+Shaheen has some specific keyboard bindings to make terminal command input easier. Maybe this is the feature of SUSE(Shaheen system: SUSE Linux Enterprise Server 12 SP3), but still it's a good thing for users.
 
-    Singularity is limited in many senses, for example it doesn't have a way to expose only specify path to container but all your path so your work path is still not clean.
-    It does provide seperate and clean running environment like docker for HPC users, but module management on HPC is somehow sufficient.
-    However container technology will enable users to build their own working environments.
+On Shaheen's terminal, you can input some thing at first, then use keyboard bindings `CTRL-UP/DOWN-arrow` to search the partially matched command history.
 
-    Singularity hub: [here](https://cloud.sylabs.io/library)
+For general Linux system, you can check `/etc/inputrc` to see system keyboard bindings. We can create user specific keyboard bindings by creating/appending a file `$HOME/.inputrc`.
 
-### Cray or Slurm applicable
+Add following to the file:
 
-1. File stripe (If you use lustre file system)
+```
+# mappings for UP-arrow and DOWN-arrow for history searching
+"\e[1;5A": history-search-backward
+"\e[1;5B": history-search-forward
+"\e[5A": history-search-backward
+"\e[5B": history-search-forward
+"\e\e[A": history-search-backward
+"\e\e[B": history-search-forward
+```
 
-    ```
-    lfs setstripe --count [stripe-count] filename/directory
-    ```
+By doing so, you can do such searching with 'UP/DOWN-arrow'. For example, you type `git` at first, then type `UP-arrow`, you will have see history commands starting from `git`.
+This is not exactly the same as features on Shaheen, but still it's useful.
 
-    By default files on Shaheen has stripe `1`, which is good if you don't share the same file for many processes or your file is small enough.
+---
 
-    How to compute stripe count :
+#### Container for HPC
 
-        1. if the file is 90GB, the square root is 9.5, so use at least 9
+Shaheen/Ibex now can support containers, [singularity](https://www.sylabs.io/docs/), which is designed for HPC scenario.
 
-        2. if using 64 MPI processes for parallel I/O, use stripe count less than 64
+```
+module load singularity/3.0
+singularity pull library://sylabsed/examples/lolcow
+# after pull, ***.sif will be downloaded and it will be used for singularity loading
+singularity shell lolcow_latest.sif
+```
 
-        3. maximum stripe count on Shaheen-II is 144
+Singularity is limited in many senses, for example it doesn't have a way to expose only specify path to container but all your path so your work path is still not clean.
+It does provide seperate and clean running environment like docker for HPC users, but module management on HPC is somehow sufficient.
+However container technology will enable users to build their own working environments.
 
-2. How to get full allocated node list
+Singularity hub: [here](https://cloud.sylabs.io/library)
 
-    Usually when one requests several nodes, inside the code, `$SLURM_NNODES` and `$SLURM_NODELIST` are set to proper values, for example :
+---
 
-    ```
-    > srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l
+## 2. Cray or Slurm applicable
 
-    > echo $SLURM_NNODES
-    2
+---
 
-    > echo $SLURM_NODELIST
-    nid00[191,200]
+#### File stripe (If you use lustre file system)
 
-    ```
+```
+lfs setstripe --count [stripe-count] filename/directory
+```
 
-    Actually `$SLURM_NODELIST` is in compressed version, which is not good for MPI program.
-    This can be a problem when you need to run program without `srun` (apparently this compressed format is designed for slurm system).
-    If you need expanded nodelist, try following :
+By default files on Shaheen has stripe `1`, which is good if you don't share the same file for many processes or your file is small enough.
 
-    ```
-    > scontrol show hostnames $SLURM_NODELIST
-    nid00191
-    nid00200
-    ```
+How to compute stripe count :
 
-3. Use `mpiexec.hydra` as usual
+    a. if the file is 90GB, the square root is 9.5, so use at least 9
 
-    Sometimes you don't want to launch your job through `srun`, you want to run it with your own specified openmpi or intel ompi,
-    however, with these launch managers, you can **not** run them as following :
+    b. if using 64 MPI processes for parallel I/O, use stripe count less than 64
 
-    ```
-    mpiexec.hydra -host nid00008 -n 1 ./a.out
-    ```
+    c. maximum stripe count on Shaheen-II is 144
 
-    if you do, you will end up with error like `Connection to nid00008 closed by remote host` or `Permission denied`.
+---
 
-    But you do actually want to specify hosts by yourself or by your program, you can run :
+#### How to get full allocated node list
 
-    ```
-    mpiexec.hydra -bootstrap slurm -host nid00008 -n 1 ./a.out
-    ```
+Usually when one requests several nodes, inside the code, `$SLURM_NNODES` and `$SLURM_NODELIST` are set to proper values, for example :
 
-    It uses the `srun` command rather than the default ssh based method to launch the remote Hydra PM service processes.
+```
+> srun --time=1:00:00 --nodes=2 -A k1210 --pty bash -l
 
-    reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra) and [mpi_environment_reference](https://software.intel.com/en-us/mpi-developer-reference-linux-hydra-environment-variables)
+> echo $SLURM_NNODES
+2
 
-    There is also another way to do this, see [here](https://software.intel.com/en-us/articles/how-to-use-slurm-pmi-with-the-intel-mpi-library-for-linux)
+> echo $SLURM_NODELIST
+nid00[191,200]
 
-    Basically you should export a few environments:
+```
 
-    ```
-    export I_MPI_PMI_LIBRARY=/full/path/to/slurm/libpmi.so
-    export I_MPI_FABRICS=shm:dapl
-    srun -N <num_nodes> -n <num_processes> ./a.out
-    ```
+Actually `$SLURM_NODELIST` is in compressed version, which is not good for MPI program.
+This can be a problem when you need to run program without `srun` (apparently this compressed format is designed for slurm system).
+If you need expanded nodelist, try following :
 
-    In this case Intel MPI Library Process Manager is not used and only Slurm utilities control the job (launch, control, terminate), so you will lose some good functionalities of Intel MPI PM.
+```
+> scontrol show hostnames $SLURM_NODELIST
+nid00191
+nid00200
+```
 
-4. MPI program get stuck on Shaheen(Usually happens when too many nodes used at the same time)
+---
 
-    I faced an issue that when I requested large number of compute nodes like 256, my program tends to get stuck during executing without any reasons, logs or erros.
-    And this is somehow random in my case, everytime gets stuck at different point.
+#### Use `mpiexec.hydra` as usual
 
-    If you use `cray-mpich`, you can simply increase the MPI buffer size and number of buffers :
+Sometimes you don't want to launch your job through `srun`, you want to run it with your own specified openmpi or intel ompi,
+however, with these launch managers, you can **not** run them as following :
 
-    ```
-    export MPICH_GNI_MAX_EAGER_MSG_SIZE=131072
-    export MPICH_GNI_NUM_BUFS=128
-    ```
+```
+mpiexec.hydra -host nid00008 -n 1 ./a.out
+```
 
-    For MPICH_GNI_MAX_EAGER_MSG_SIZE, `131072` is already maximum value you can get;
-    for MPICH_GNI_NUM_BUFS, default value is `64`, I didn't find any limit about this term, you should set it based on your memory limits.
+if you do, you will end up with error like `Connection to nid00008 closed by remote host` or `Permission denied`.
 
-    reference : [MPI Optimization](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/HPCSAUDI17/mpi_optimization.pdf)
+But you do actually want to specify hosts by yourself or by your program, you can run :
 
-    If you are using Intel MPI(Hydra PM), can set environment variables :
+```
+mpiexec.hydra -bootstrap slurm -host nid00008 -n 1 ./a.out
+```
 
-    ```
-    export I_MPI_SHM_CELL_FWD_SIZE=128K
-    export I_MPI_SHM_CELL_BWD_SIZE=128K
-    export I_MPI_SHM_CELL_EXT_SIZE=128K
-    ```
+It uses the `srun` command rather than the default ssh based method to launch the remote Hydra PM service processes.
 
-    In addition, 
+reference : [slurm_intel_mpiexec_hydra](https://slurm.schedmd.com/mpi_guide.html#intel_mpiexec_hydra) and [mpi_environment_reference](https://software.intel.com/en-us/mpi-developer-reference-linux-hydra-environment-variables)
 
-    ```
-    export I_MPI_SHM_CELL_FWD_NUM=16
-    export I_MPI_SHM_CELL_BWD_NUM=16
-    export I_MPI_SHM_CELL_EXT_NUM_TOTAL=8K
-    ```
+There is also another way to do this, see [here](https://software.intel.com/en-us/articles/how-to-use-slurm-pmi-with-the-intel-mpi-library-for-linux)
 
-5. Burst Buffer (Enhancement of 1: File stripe)
+Basically you should export a few environments:
 
-    Burst buffer is supported for fast data access, indeed it's SSD instead of normal disk drive.
+```
+export I_MPI_PMI_LIBRARY=/full/path/to/slurm/libpmi.so
+export I_MPI_FABRICS=shm:dapl
+srun -N <num_nodes> -n <num_processes> ./a.out
+```
 
-    Once you have access to burst buffer, you can create a temporary buffer for your data which only exsits only for one job submission,
-    or you can create a persistent buffer, this will exist forever(generally, it's not guaranteed), you can use it in many jobs.
+In this case Intel MPI Library Process Manager is not used and only Slurm utilities control the job (launch, control, terminate), so you will lose some good functionalities of Intel MPI PM.
 
-    1. How to create a persistent buffer and copy(don't move, it's better to have a copy on normal disk) your data to that buffer:
+---
+
+#### MPI program get stuck on Shaheen(Usually happens when too many nodes used at the same time)
+
+I faced an issue that when I requested large number of compute nodes like 256, my program tends to get stuck during executing without any reasons, logs or erros.
+And this is somehow random in my case, everytime gets stuck at different point.
+
+If you use `cray-mpich`, you can simply increase the MPI buffer size and number of buffers :
+
+```
+export MPICH_GNI_MAX_EAGER_MSG_SIZE=131072
+export MPICH_GNI_NUM_BUFS=128
+```
+
+For MPICH_GNI_MAX_EAGER_MSG_SIZE, `131072` is already maximum value you can get;
+for MPICH_GNI_NUM_BUFS, default value is `64`, I didn't find any limit about this term, you should set it based on your memory limits.
+
+reference : [MPI Optimization](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/HPCSAUDI17/mpi_optimization.pdf)
+
+If you are using Intel MPI(Hydra PM), can set environment variables :
+
+```
+export I_MPI_SHM_CELL_FWD_SIZE=128K
+export I_MPI_SHM_CELL_BWD_SIZE=128K
+export I_MPI_SHM_CELL_EXT_SIZE=128K
+```
+
+In addition,
+
+```
+export I_MPI_SHM_CELL_FWD_NUM=16
+export I_MPI_SHM_CELL_BWD_NUM=16
+export I_MPI_SHM_CELL_EXT_NUM_TOTAL=8K
+```
+
+---
+
+#### Burst Buffer (Enhancement of 1: File stripe)
+
+Burst buffer is supported for fast data access, indeed it's SSD instead of normal disk drive.
+
+Once you have access to burst buffer, you can create a temporary buffer for your data which only exsits only for one job submission,
+or you can create a persistent buffer, this will exist forever(generally, it's not guaranteed), you can use it in many jobs.
+
+1. How to create a persistent buffer and copy(don't move, it's better to have a copy on normal disk) your data to that buffer:
 
     a. Create a persistent buffer, find a place to keep your burst buffer config file, I use `/scratch/username/.burst`,
 
-        ```
-        echo "#BB create_persistent name=testData capacity=500GB access_mode=striped type=scratch" >> /scratch/username/.burst/persist.conf
+    ```
+    echo "#BB create_persistent name=testData capacity=500GB access_mode=striped type=scratch" >> /scratch/username/.burst/persist.conf
 
-        salloc -N 0 --bbf=/scratch/username/.burst/persist.conf
-        ```
+    salloc -N 0 --bbf=/scratch/username/.burst/persist.conf
+    ```
 
-        Once you get allocated, you will have your own persistent buffer
+    Once you get allocated, you will have your own persistent buffer
 
     b. Copy your local data to persistent buffer (I copied a directory, file is also accepted),
 
-        ```
-        echo "#DW persistentdw name=testData" >> /scratch/username/.burst/datamove.conf
-        echo "#DW stage_in source=/local/data/path/ destination=$DW_PERSISTENT_STRIPED_testData/ type=directory" >> /scratch/username/.burst/datamove.conf
+    ```
+    echo "#DW persistentdw name=testData" >> /scratch/username/.burst/datamove.conf
+    echo "#DW stage_in source=/local/data/path/ destination=$DW_PERSISTENT_STRIPED_testData/ type=directory" >> /scratch/username/.burst/datamove.conf
 
-        salloc -N 0 --bbf=/scratch/username/.burst/datamove.conf
-        ```
+    salloc -N 0 --bbf=/scratch/username/.burst/datamove.conf
+    ```
 
-        If your data is large, then you will pend for some time for data copying, once your job is started, that means data will be ready for you.
+    If your data is large, then you will pend for some time for data copying, once your job is started, that means data will be ready for you.
 
-        Then change your codes or applications to access data from `$DW_PERSISTENT_STRIPED_testData`, this will be faster.
+    Then change your codes or applications to access data from `$DW_PERSISTENT_STRIPED_testData`, this will be faster.
 
     c. Destroy staged data in burst buffer
 
-        ```
-        echo "#BB destroy_persistent name=testData" >> /scratch/username/.burst/destroy.conf
-        salloc -N 0 --bbf=/scratch/username/.burst/destroy.conf
-        ```
+    ```
+    echo "#BB destroy_persistent name=testData" >> /scratch/username/.burst/destroy.conf
+    salloc -N 0 --bbf=/scratch/username/.burst/destroy.conf
+    ```
 
-        Note that you can request `0` work nodes for burst buffer configurations.
+    Note that you can request `0` work nodes for burst buffer configurations.
 
     d. Use it in following jobs
 
-        add following to your job script, below `#SBATCH` commands
+    add following to your job script, below `#SBATCH` commands
 
-        ```
-        #DW persistentdw name=testData
-        echo $DW_PERSISTENT_STRIPED_testData
-        ```
+    ```
+    #DW persistentdw name=testData
+    echo $DW_PERSISTENT_STRIPED_testData
+    ```
 
-        make sure you access your data through this environment variable `DW_PERSISTENT_STRIPED_dataName`, because absolute path will change for different runs. Actually you can acess the data through the actual path, it changes for different jobs. On Shaheen, it follows following pattern:
+    make sure you access your data through this environment variable `DW_PERSISTENT_STRIPED_dataName`, because absolute path will change for different runs. Actually you can acess the data through the actual path, it changes for different jobs. On Shaheen, it follows following pattern:
 
-        ```
-        /var/opt/cray/dws/mounts/batch/{dataName}_{JOBID}_striped_scratch
-        ```
+    ```
+    /var/opt/cray/dws/mounts/batch/{dataName}_{JOBID}_striped_scratch
+    ```
 
-        you can obtain job id through `$SLURM_JOBID` environment variable.
+    you can obtain job id through `$SLURM_JOBID` environment variable.
 
-    2. How to create and use a temporary burst buffer which only works for current job?
+2. How to create and use a temporary burst buffer which only works for current job?
 
     ```
     #DW jobdw type=scratch access_mode=striped capacity=2TiB
@@ -312,7 +340,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     /var/opt/cray/dws/mounts/batch/{JOBID}_striped_scratch
     ```
 
-    3. On Shaheen there is only one burst buffer pool(`wlm_pool`), and the granularity is `368GiB`. This means requesting less than 368GB will put all the data into one burst buffer node.
+3. On Shaheen there is only one burst buffer pool(`wlm_pool`), and the granularity is `368GiB`. This means requesting less than 368GB will put all the data into one burst buffer node.
 
     How to calculate how many burst buffer nodes you will need?
 
@@ -323,247 +351,261 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
     If you have 128GB data, and you want to spread them across 64 burst buffer nodes, you can specify in `persist.conf` file:
 
-    a. `capacity=23551GiB` (64*368-1=23551)
+    a. `capacity=23551GiB` (64x368-1=23551)
 
-    b. `capacity=25288` (floor(64*395.14))
+    b. `capacity=25288` (floor(64x395.14))
 
     The system will allocate one node for you if you request the capacity less than the full capacity of one node, so substract or floor is okay here.
 
-    Notive: As there are totally 268 burst buffer nodes, each node can accomodate several DW instances, that means if you request more than `268*368=98624GiB` capacity, some nodes will keep more than 1 instance, this will hurt your performance.
+    *Notice: As there are totally 268 burst buffer nodes, each node can accomodate several DW instances, that means if you request more than `268x368=98624GiB` capacity, some nodes will keep more than 1 instance, this will hurt your performance.*
 
-    [Slide](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/Shaheen_training/171107_IO/burst_buffer_training_november_2017.pdf): this slide uses `397.44GiB` for nodes calculation, which is wrong.
+[Slide](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/Shaheen_training/171107_IO/burst_buffer_training_november_2017.pdf): this slide uses `397.44GiB` for nodes calculation, which is wrong.
 
-6. `cc` and `CC` wrapper on Cray
+---
 
-    `cc` is c wrapper, `CC` is cpp wrapper, as you may change your programming environment(3 PEs totally, PrgEnv-cray, PrgEnv-gnu, PrgEnv-intel), flags inside `cc`/`CC` may differ.
-    It's good to know what's inside generally.
+#### `cc` and `CC` wrapper on Cray
 
-    Usually with `mpicc`/`mpicxx` we can do `mpicc --show`, with `cc`/`CC` you should use `cc --cray-print-opts=all`
+`cc` is c wrapper, `CC` is cpp wrapper, as you may change your programming environment(3 PEs totally, PrgEnv-cray, PrgEnv-gnu, PrgEnv-intel), flags inside `cc`/`CC` may differ.
+It's good to know what's inside generally.
 
-    Following is the output in `PrgEnv-intel`:
+Usually with `mpicc`/`mpicxx` we can do `mpicc --show`, with `cc`/`CC` you should use `cc --cray-print-opts=all`
 
-    ```
-    cc --cray-print-opts=all
+Following is the output in `PrgEnv-intel`:
 
-    -I/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/include -I/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/include -I/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/include -I/opt/cray/alps/6.6.43-6.0.7.0_26.4__ga796da3.ari/include -I/opt/cray/xpmem/2.2.15-6.0.7.1_5.11__g7549d06.ari/include -I/opt/cray/gni-headers/5.0.12.0-6.0.7.0_24.1__g3b1768f.ari/include -I/opt/cray/pe/pmi/5.0.13/include -I/opt/cray/ugni/6.0.14.0-6.0.7.0_23.1__gea11d3d.ari/include -I/opt/cray/udreg/2.3.2-6.0.7.0_33.18__g5196236.ari/include -I/opt/cray/wlm_detect/1.3.3-6.0.7.0_47.2__g7109084.ari/include -I/opt/cray/krca/2.2.4-6.0.7.1_5.42__g8505b97.ari/include -I/opt/cray-hss-devel/8.0.0/include -L/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/lib64 -L/opt/cray/pe/atp/2.1.1/libApp -L/lib64 -Wl,--no-as-needed,-lAtpSigHandler,-lAtpSigHCommData -Wl,--undefined=_ATP_Data_Globals -Wl,--undefined=__atpHandlerInstall -lrca -lz -Wl,--as-needed,-lsci_intel_mpi,--no-as-needed -Wl,--as-needed,-lsci_intel,--no-as-needed -Wl,--as-needed,-lmpich_intel,--no-as-needed
+```
+cc --cray-print-opts=all
 
-    CC --cray-print-opts=all
+-I/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/include -I/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/include -I/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/include -I/opt/cray/alps/6.6.43-6.0.7.0_26.4__ga796da3.ari/include -I/opt/cray/xpmem/2.2.15-6.0.7.1_5.11__g7549d06.ari/include -I/opt/cray/gni-headers/5.0.12.0-6.0.7.0_24.1__g3b1768f.ari/include -I/opt/cray/pe/pmi/5.0.13/include -I/opt/cray/ugni/6.0.14.0-6.0.7.0_23.1__gea11d3d.ari/include -I/opt/cray/udreg/2.3.2-6.0.7.0_33.18__g5196236.ari/include -I/opt/cray/wlm_detect/1.3.3-6.0.7.0_47.2__g7109084.ari/include -I/opt/cray/krca/2.2.4-6.0.7.1_5.42__g8505b97.ari/include -I/opt/cray-hss-devel/8.0.0/include -L/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/lib64 -L/opt/cray/pe/atp/2.1.1/libApp -L/lib64 -Wl,--no-as-needed,-lAtpSigHandler,-lAtpSigHCommData -Wl,--undefined=_ATP_Data_Globals -Wl,--undefined=__atpHandlerInstall -lrca -lz -Wl,--as-needed,-lsci_intel_mpi,--no-as-needed -Wl,--as-needed,-lsci_intel,--no-as-needed -Wl,--as-needed,-lmpich_intel,--no-as-needed
 
-    -I/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/include -I/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/include -I/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/include -I/opt/cray/alps/6.6.43-6.0.7.0_26.4__ga796da3.ari/include -I/opt/cray/xpmem/2.2.15-6.0.7.1_5.11__g7549d06.ari/include -I/opt/cray/gni-headers/5.0.12.0-6.0.7.0_24.1__g3b1768f.ari/include -I/opt/cray/pe/pmi/5.0.13/include -I/opt/cray/ugni/6.0.14.0-6.0.7.0_23.1__gea11d3d.ari/include -I/opt/cray/udreg/2.3.2-6.0.7.0_33.18__g5196236.ari/include -I/opt/cray/wlm_detect/1.3.3-6.0.7.0_47.2__g7109084.ari/include -I/opt/cray/krca/2.2.4-6.0.7.1_5.42__g8505b97.ari/include -I/opt/cray-hss-devel/8.0.0/include -L/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/lib64 -L/opt/cray/pe/atp/2.1.1/libApp -L/lib64 -Wl,--no-as-needed,-lAtpSigHandler,-lAtpSigHCommData -Wl,--undefined=_ATP_Data_Globals -Wl,--undefined=__atpHandlerInstall -lrca -lz -Wl,--as-needed,-lsci_intel_mpi,--no-as-needed -Wl,--as-needed,-lsci_intel,--no-as-needed -Wl,--as-needed,-lmpich_intel,--no-as-needed -Wl,--as-needed,-lmpichcxx_intel,--no-as-needed
-    ```
+CC --cray-print-opts=all
 
-7. Check out who is the most annoying guy on Shaheen
+-I/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/include -I/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/include -I/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/include -I/opt/cray/alps/6.6.43-6.0.7.0_26.4__ga796da3.ari/include -I/opt/cray/xpmem/2.2.15-6.0.7.1_5.11__g7549d06.ari/include -I/opt/cray/gni-headers/5.0.12.0-6.0.7.0_24.1__g3b1768f.ari/include -I/opt/cray/pe/pmi/5.0.13/include -I/opt/cray/ugni/6.0.14.0-6.0.7.0_23.1__gea11d3d.ari/include -I/opt/cray/udreg/2.3.2-6.0.7.0_33.18__g5196236.ari/include -I/opt/cray/wlm_detect/1.3.3-6.0.7.0_47.2__g7109084.ari/include -I/opt/cray/krca/2.2.4-6.0.7.1_5.42__g8505b97.ari/include -I/opt/cray-hss-devel/8.0.0/include -L/opt/cray/pe/libsci/17.12.1/INTEL/16.0/x86_64/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/dmapp/default/lib64 -L/opt/cray/pe/mpt/7.7.0/gni/mpich-intel/16.0/lib -L/opt/cray/rca/2.2.18-6.0.7.0_33.3__g2aa4f39.ari/lib64 -L/opt/cray/pe/atp/2.1.1/libApp -L/lib64 -Wl,--no-as-needed,-lAtpSigHandler,-lAtpSigHCommData -Wl,--undefined=_ATP_Data_Globals -Wl,--undefined=__atpHandlerInstall -lrca -lz -Wl,--as-needed,-lsci_intel_mpi,--no-as-needed -Wl,--as-needed,-lsci_intel,--no-as-needed -Wl,--as-needed,-lmpich_intel,--no-as-needed -Wl,--as-needed,-lmpichcxx_intel,--no-as-needed
+```
 
-    Sometimes you submit a small job but it's pending for very long time, in that case it's very annoying.
-    So you want to know who occupied most compute nodes on Shaheen.
+---
 
-    ```
-    squeue | less
-    ```
+#### Check out who is the most annoying guy on Shaheen
 
-    Through above command you can see status of all submitted jobs, some are running, some are pending.
-    You noticed one guy who has one job array contains one thousand jobs, each needs to run for 24 hours.
-    You have username of that guy but no other information, but username on Shaheen is not enough to find a person.
+Sometimes you submit a small job but it's pending for very long time, in that case it's very annoying.
+So you want to know who occupied most compute nodes on Shaheen.
 
-    ```
-    finger username
-    ```
+```
+squeue | less
+```
 
-    However, `finger` command can give actual full name of given user, so you can send an email to him to complain about his jobs :)
+Through above command you can see status of all submitted jobs, some are running, some are pending.
+You noticed one guy who has one job array contains one thousand jobs, each needs to run for 24 hours.
+You have username of that guy but no other information, but username on Shaheen is not enough to find a person.
 
-8. Make your own modules, make your own environments
+```
+finger username
+```
 
-    Usually when you need to do some programming staff, you need specific compilers, headers, libbraries and so on. 
-    You can execute several `module load xxx` to load all modules, but another solution is to build a specific module that will do all these things for you.
+However, `finger` command can give actual full name of given user, so you can send an email to him to complain about his jobs :)
 
-    a. Find a good place, like `/scratch/username/.usr/local/share/modulefiles`, create a file,
+---
 
-    ```
-    cd /scratch/username/.usr/local/share/modulefiles
-    touch common
+#### Make your own modules, make your own environments
 
-    echo "#%Module" >> common
-    echo "" >> common
-    echo "module swap PrgEnv-cray/6.0.4 PrgEnv-intel" >> common
-    echo "module load cmake/3.10.2" >> common
-    echo "module load hdf5/1.8.21" >> common
-   ```
+Usually when you need to do some programming staff, you need specific compilers, headers, libbraries and so on. 
+You can execute several `module load xxx` to load all modules, but another solution is to build a specific module that will do all these things for you.
 
-   The first line in file `common` will indicate this is a module file. 
-   You can put all `module load` commands in `common` file to let it load all dependencies you want.
+a. Find a good place, like `/scratch/username/.usr/local/share/modulefiles`, create a file,
 
-    b. In order to use this new module, run following commands:
+```
+cd /scratch/username/.usr/local/share/modulefiles
+touch common
 
-    ```
-    module use -a /scratch/username/.usr/local/share/modulefiles
-    module load common
-    ```
+echo "#%Module" >> common
+echo "" >> common
+echo "module swap PrgEnv-cray/6.0.4 PrgEnv-intel" >> common
+echo "module load cmake/3.10.2" >> common
+echo "module load hdf5/1.8.21" >> common
+```
 
-    Now all modules will be loaded.
+The first line in file `common` will indicate this is a module file. 
+You can put all `module load` commands in `common` file to let it load all dependencies you want.
 
-    c. Do other settings, not only just loading more modules, new environment variables and some paths can be set in this modules.
-    We can append following `common` file or create a new module file just to have a better structure.
+b. In order to use this new module, run following commands:
 
-    ```
-    cd /scratch/cheny0l/.usr/local/share/modulefiles
-    mkdir depends
-    cd depends
-    # file name will denote the version number
-    touch 1.0
+```
+module use -a /scratch/username/.usr/local/share/modulefiles
+module load common
+```
 
-    echo "#%Module" >> 1.0
-    echo "" >> 1.0
+Now all modules will be loaded.
 
-    echo "set     root            /scratch/username/.usr/local" >> 1.0
-    echo "prepend-path    PATH            $root/bin" >> 1.0
-    echo "prepend-path    CPLUS_INCLUDE_PATH  $root/include" >> 1.0
-    echo "prepend-path    C_INCLUDE_PATH      $root/include" >> 1.0
-    echo "prepend-path    LD_LIBRARY_PATH     $root/lib:$root/lib64" >> 1.0
-    echo "prepend-path    LIBRARY_PATH        $root/lib:$root/lib64" >> 1.0
-    echo "prepend-path    MANPATH         $root/share" >> 1.0
+c. Do other settings, not only just loading more modules, new environment variables and some paths can be set in this modules.
+We can append following `common` file or create a new module file just to have a better structure.
 
-    cd ../
-    # append above file to `common` module
-    echo "module load depends/1.0" >> 1.0
-    ```
+```
+cd /scratch/cheny0l/.usr/local/share/modulefiles
+mkdir depends
+cd depends
+# file name will denote the version number
+touch 1.0
 
-    Now when commands in `b` are executed, not only new modules will be loaded, but also you can have all above paths.
+echo "#%Module" >> 1.0
+echo "" >> 1.0
 
-9. Profiling tools available on Cray system
+echo "set     root            /scratch/username/.usr/local" >> 1.0
+echo "prepend-path    PATH            $root/bin" >> 1.0
+echo "prepend-path    CPLUS_INCLUDE_PATH  $root/include" >> 1.0
+echo "prepend-path    C_INCLUDE_PATH      $root/include" >> 1.0
+echo "prepend-path    LD_LIBRARY_PATH     $root/lib:$root/lib64" >> 1.0
+echo "prepend-path    LIBRARY_PATH        $root/lib:$root/lib64" >> 1.0
+echo "prepend-path    MANPATH         $root/share" >> 1.0
 
-    Cray does provide a way to do program profiling, here I forget I/O profiling(`darshan`). Imagine you have a program and want to do profiling,
+cd ../
+# append above file to `common` module
+echo "module load depends/1.0" >> 1.0
+```
 
-    a. load proper modules, `perftools-lite` is a lite module for doing this, you don't need to do anything else with this module, just compile as normal.
-    but it has conflict with `darshan` module, so make sure you have removed it before using `perftools-lite`
+Now when commands in `b` are executed, not only new modules will be loaded, but also you can have all above paths.
 
-    ```
-    module unload darshan
-    module load perftools-lite
-    ```
+---
 
-    b. compile program, remember to compile program with Cray compiler wrapper always
+#### Profiling tools available on Cray system
 
-    ```
-    CC examples.cc -o examples
-    ```
+Cray does provide a way to do program profiling, here I forget I/O profiling(`darshan`). Imagine you have a program and want to do profiling,
 
-    c. submit a job, once job is finished, you can find profiling output in output log file, and some other files for visulization
+a. load proper modules, `perftools-lite` is a lite module for doing this, you don't need to do anything else with this module, just compile as normal.
+but it has conflict with `darshan` module, so make sure you have removed it before using `perftools-lite`
 
-    Of course there is also full module called `perftools`,
+```
+module unload darshan
+module load perftools-lite
+```
 
-    a. load modules as the same
+b. compile program, remember to compile program with Cray compiler wrapper always
 
-    ```
-    module unload darshan
-    module load perftools
-    ```
+```
+CC examples.cc -o examples
+```
 
-    b. compile program, keep all `*.o` files
+c. submit a job, once job is finished, you can find profiling output in output log file, and some other files for visulization
 
-    ```
-    CC -c examples.o examples.cc
-    CC -o exmaples examples.o
-    ```
+Of course there is also full module called `perftools`,
 
-    c. run one more build step, one more executable file `examples+pat` will be generated
+a. load modules as the same
 
-    ```
-    pat_build examples
-    ```
+```
+module unload darshan
+module load perftools
+```
 
-    d. submit job with `examples+pat`, use `pat_report` to parse the output report, also some visulizations can be applied here
+b. compile program, keep all `*.o` files
 
-    Detailed [exmaples and explanations](https://www.nersc.gov/users/software/performance-and-debugging-tools/craypat/)
+```
+CC -c examples.o examples.cc
+CC -o exmaples examples.o
+```
 
-10. Dynamic linking on Cray system
+c. run one more build step, one more executable file `examples+pat` will be generated
 
-    On supercomputer login nodes and compute nodes are seperate, although they share the same environments.
-    Users compile their code on login nodes, then submit jobs to compute nodes. Therefore it's better to use static linking when compilation happens.
-    However, some applications do require shared libraries on the compute nodes(my experience is compiling mkldnn on Shaheen).
+```
+pat_build examples
+```
 
-    Two ways can address this situation:
+d. submit job with `examples+pat`, use `pat_report` to parse the output report, also some visulizations can be applied here
 
-    a. set 'CRAYPE_LINK_TYPE' to `dynamic`
+Detailed [exmaples and explanations](https://www.nersc.gov/users/software/performance-and-debugging-tools/craypat/)
 
-    ```
-    export CRAYPE_LINK_TYPE=dynamic
-    cc -o test test.c
-    ```
+---
 
-    b. use '-dynamic' flag during linking
+#### Dynamic linking on Cray system
 
-    ```
-    cc -dynamic -o test test.c
-    ```
+On supercomputer login nodes and compute nodes are seperate, although they share the same environments.
+Users compile their code on login nodes, then submit jobs to compute nodes. Therefore it's better to use static linking when compilation happens.
+However, some applications do require shared libraries on the compute nodes(my experience is compiling mkldnn on Shaheen).
 
-11. Decide when to run your job
+Two ways can address this situation:
 
-    - delay the schedule of your job
+a. set 'CRAYPE_LINK_TYPE' to `dynamic`
 
-    ```
-    sbatch --begin=2019-05-15T03:30:00 test.sh
+```
+export CRAYPE_LINK_TYPE=dynamic
+cc -o test test.c
+```
 
-    sbatch --begin=now+1hour
-    ```
+b. use '-dynamic' flag during linking
 
-    - add dependecy to current job
+```
+cc -dynamic -o test test.c
+```
 
-    ```
-    sbatch test1.sh
-    >11111111 #jobid
-    sbatch --dependency=afterok:111111111 test2.sh
-    ```
+---
 
-    Becasue `sbatch` command will return the jobid when there is no error, so in one scripts, one can do:
+#### Decide when to run your job
 
-    ```
-    #!/bin/bash
+- delay the schedule of your job
 
-    job1=$(sbatch test1.sh)
-    sbatch --dependency=afterok:$job1 test2.sh
-    ```
+```
+sbatch --begin=2019-05-15T03:30:00 test.sh
 
-    Genrally in Linux system, one script or command can also be delayed with `at` command:
+sbatch --begin=now+1hour
+```
 
-    ```
-    echo $(date) > $HOME/log | at 16:00
-    ```
+- add dependecy to current job
 
-    Following command will execute `echo` command at certain time, here is `16:00`. `atq` can query upcoming jobs.
+```
+sbatch test1.sh
+>11111111 #jobid
+sbatch --dependency=afterok:111111111 test2.sh
+```
 
-    Running scripts repeatedly will require `crontab`, but it's a little tricky to configure it correct.
+Becasue `sbatch` command will return the jobid when there is no error, so in one scripts, one can do:
 
-12. Some helper scripts with slurm job management system
+```
+#!/bin/bash
 
-    a. watch a job with "JOBID  NAME    ST  TIME    NODES   START_TIME"
+job1=$(sbatch test1.sh)
+sbatch --dependency=afterok:$job1 test2.sh
+```
 
-    ```
-    watch -n 1 'squeue -u cheny0l -o "%.18i %.18j %.2t %.10M %.6D %S"'
-    ```
+Genrally in Linux system, one script or command can also be delayed with `at` command:
 
-    b. query old jobs
+```
+echo $(date) > $HOME/log | at 16:00
+```
 
-    ```
-    sacct --starttime 2019-03-01 --format=jobid%15,jobname%30,partition,ntasks,alloccpus,elapsed%30,state%30,exitcode%30
-    ```
+Following command will execute `echo` command at certain time, here is `16:00`. `atq` can query upcoming jobs.
 
-    c. use 72hours partition if you are eligible, put in job scripts
+Running scripts repeatedly will require `crontab`, but it's a little tricky to configure it correct.
 
-    ```
-    #SBATCH --partition=72hours
-    #SBATCH --qos=72hours
-    ```
+---
 
-    d. general job header template
+#### Some helper scripts with slurm job management system
 
-    ```
-    #!/bin/bash
-    #SBATCH -A k1111
-    #SBATCH --nodes=16
-    #SBATCH --ntasks-per-node=1
-    #SBATCH --exclusive
-    #SBATCH -J test
-    #SBATCH -o out.test
-    #SBATCH -e err.test
-    #SBATCH --time=30:00
-    ```
+a. watch a job with "JOBID  NAME    ST  TIME    NODES   START_TIME"
+
+```
+watch -n 1 'squeue -u cheny0l -o "%.18i %.18j %.2t %.10M %.6D %S"'
+```
+
+b. query old jobs
+
+```
+sacct --starttime 2019-03-01 --format=jobid%15,jobname%30,partition,ntasks,alloccpus,elapsed%30,state%30,exitcode%30
+```
+
+c. use 72hours partition if you are eligible, put in job scripts
+
+```
+#SBATCH --partition=72hours
+#SBATCH --qos=72hours
+```
+
+d. general job header template
+
+```
+#!/bin/bash
+#SBATCH -A k1111
+#SBATCH --nodes=16
+#SBATCH --ntasks-per-node=1
+#SBATCH --exclusive
+#SBATCH -J test
+#SBATCH -o out.test
+#SBATCH -e err.test
+#SBATCH --time=30:00
+```
