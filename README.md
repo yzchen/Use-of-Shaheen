@@ -247,9 +247,9 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     Once you have access to burst buffer, you can create a temporary buffer for your data which only exsits only for one job submission,
     or you can create a persistent buffer, this will exist forever(generally, it's not guaranteed), you can use it in many jobs.
 
-    How to create a persistent buffer and copy(don't move, it's better to have a copy on normal disk) your data to that buffer:
+    1. How to create a persistent buffer and copy(don't move, it's better to have a copy on normal disk) your data to that buffer:
 
-    1. Create a persistent buffer, find a place to keep your burst buffer config file, I use `/scratch/username/.burst`,
+    a. Create a persistent buffer, find a place to keep your burst buffer config file, I use `/scratch/username/.burst`,
 
         ```
         echo "#BB create_persistent name=testData capacity=500GB access_mode=striped type=scratch" >> /scratch/username/.burst/persist.conf
@@ -259,7 +259,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
         Once you get allocated, you will have your own persistent buffer
 
-    2. Copy your local data to persistent buffer (I copied a directory, file is also accepted),
+    b. Copy your local data to persistent buffer (I copied a directory, file is also accepted),
 
         ```
         echo "#DW persistentdw name=testData" >> /scratch/username/.burst/datamove.conf
@@ -272,7 +272,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
         Then change your codes or applications to access data from `$DW_PERSISTENT_STRIPED_testData`, this will be faster.
 
-    3. Destroy staged data in burst buffer
+    c. Destroy staged data in burst buffer
 
         ```
         echo "#BB destroy_persistent name=testData" >> /scratch/username/.burst/destroy.conf
@@ -281,7 +281,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
 
         Note that you can request `0` work nodes for burst buffer configurations.
 
-    4. Use it in following jobs
+    d. Use it in following jobs
 
         add following to your job script, below `#SBATCH` commands
 
@@ -297,23 +297,42 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
         ```
 
         you can obtain job id through `$SLURM_JOBID` environment variable.
-    
-    Temporal burst buffer can also be used, it will only exist for current job. Access the data through `$DW_JOB_STRIPED`, or use follong pattern on Shaheen:
+
+    2. How to create and use a temporary burst buffer which only works for current job?
+
+    ```
+    #DW jobdw type=scratch access_mode=striped capacity=2TiB
+    #DW stage_in type=directory source=/scratch/markomg/for_bb destination=$DW_JOB_STRIPED
+    #DW stage_out type=directory destination=/scratch/markomg/back_up source=$DW_JOB_STRIPED/
+    ```
+
+    Temporary burst buffer can also be accessed through `$DW_JOB_STRIPED`, or use follong pattern on Shaheen:
 
     ```
     /var/opt/cray/dws/mounts/batch/{JOBID}_striped_scratch
     ```
 
-    By switching `pool=wlm_pool`(82GB) and `pool=sm_pool`(20.14GB), one can specify pool size for each BB node when in striped case. For example, when requesting a buffer with 40GB, with `wlm_pool` only one BB node is needed, but with `sm_pool` will get 2 nodes.
+    3. On Shaheen there is only one burst buffer pool(`wlm_pool`), and the granularity is `368GiB`. This means requesting less than 368GB will put all the data into one burst buffer node.
 
-    On Shaheen there is only one pool(`wlm_pool`), and the granularity is `368GB` not `82GB`. This means requesting less than 368GB will put all the data into one burst buffer node.
-    **If you have data with size 128GB, and you want to spread your data over 64 burst buffer nodes, you need to request `64*397.44=25436GB` in configuration file `persist.conf`, by default the data will be splitted in round-robin mechanism**.
-    `397.44` here is not exactly `368` shown in granularity column, they have some relations inside but I don't know what it is, in real calculation `397.44` should be used.
+    How to calculate how many burst buffer nodes you will need?
 
-    It seems users should specify the same project accout to operate on the burst buffer. I used new project account to create a persistent burst buffer, but with old project accout, it cannot be deleted.
+    - Remember the difference between `KB` and `KiB`, `1KB` means the `1000Bytes` and `1KiB` means `1024Bytes`. This rule will alse apply to `MB/MiB`, `GB/GiB`, `TB/TiB`, and so on.
 
-    Slide: [here](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/Shaheen_training/171107_IO/burst_buffer_training_november_2017.pdf)
-    
+    - Keep consistent with `XB/XiB`, for example, run `dwstat` command on Shaheen will show you `gran=368GiB`. However, run `dwstat -G` you will have `gran=395.14GB`.
+    These two results are the same inside but just with different representations.
+
+    If you have 128GB data, and you want to spread them across 64 burst buffer nodes, you can specify in `persist.conf` file:
+
+    a. `capacity=23551GiB` (64*368-1=23551)
+
+    b. `capacity=25288` (floor(64*395.14))
+
+    The system will allocate one node for you if you request the capacity less than the full capacity of one node, so substract or floor is okay here.
+
+    Notive: As there are totally 268 burst buffer nodes, each node can accomodate several DW instances, that means if you request more than `268*368=98624GiB` capacity, some nodes will keep more than 1 instance, this will hurt your performance.
+
+    [Slide](https://www.hpc.kaust.edu.sa/sites/default/files/files/public/Shaheen_training/171107_IO/burst_buffer_training_november_2017.pdf): this slide uses `397.44GiB` for nodes calculation, which is wrong.
+
 6. `cc` and `CC` wrapper on Cray
 
     `cc` is c wrapper, `CC` is cpp wrapper, as you may change your programming environment(3 PEs totally, PrgEnv-cray, PrgEnv-gnu, PrgEnv-intel), flags inside `cc`/`CC` may differ.
@@ -362,7 +381,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     ```
     cd /scratch/username/.usr/local/share/modulefiles
     touch common
- 
+
     echo "#%Module" >> common
     echo "" >> common
     echo "module swap PrgEnv-cray/6.0.4 PrgEnv-intel" >> common
@@ -391,10 +410,10 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     cd depends
     # file name will denote the version number
     touch 1.0
- 
+
     echo "#%Module" >> 1.0
     echo "" >> 1.0
- 
+
     echo "set     root            /scratch/username/.usr/local" >> 1.0
     echo "prepend-path    PATH            $root/bin" >> 1.0
     echo "prepend-path    CPLUS_INCLUDE_PATH  $root/include" >> 1.0
@@ -402,7 +421,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     echo "prepend-path    LD_LIBRARY_PATH     $root/lib:$root/lib64" >> 1.0
     echo "prepend-path    LIBRARY_PATH        $root/lib:$root/lib64" >> 1.0
     echo "prepend-path    MANPATH         $root/share" >> 1.0
- 
+
     cd ../
     # append above file to `common` module
     echo "module load depends/1.0" >> 1.0
@@ -445,7 +464,7 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     CC -c examples.o examples.cc
     CC -o exmaples examples.o
     ```
-    
+
     c. run one more build step, one more executable file `examples+pat` will be generated
 
     ```
@@ -463,7 +482,6 @@ some can be used in all [Cray](https://www.cray.com/) HPC systems or slurm manag
     However, some applications do require shared libraries on the compute nodes(my experience is compiling mkldnn on Shaheen).
 
     Two ways can address this situation:
-
 
     a. set 'CRAYPE_LINK_TYPE' to `dynamic`
 
