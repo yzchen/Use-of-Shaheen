@@ -61,9 +61,7 @@ You will find many tips which are very helpful here.
     but actually this is not one of PATHs that can be used by compiler system. So if you want to compile your program with `hdf5`,
     you need to set (`CPATH`) or (`C_INCLUDE_PATH` and `CPP_INCLUDE_PATH`) with the value of `INCLUDE`.
 
-3. some modules set only one of `LIBRARY_PATH` and `LD_LIBRARY_PATH`, so sometimes your compilation will fail with some linking errors,
-    again I had an issue with `hdf5`, it only set `LD_LIBRARY_PATH`, after I set `LIBRARY_PATH` manually, I got it right. 
-    That means sometimes you need to make sure you have both paths.
+3. some modules set only one of `LIBRARY_PATH` and `LD_LIBRARY_PATH`(mainly  `LB_LIBRARY_PATH`). However, `LIBRARY_PATH` will help find the static/dynamic libraries during compilation time, if one uses `LIBRARY_PATH` to compile program with dynamic libraries, then during running, `LD_LIBRARY_PATH` should be set to link the correct dynamic libraries. Actually Shaheen is not developer friendly, they assume people mainly use Shaheen for simulation not development.  
 
 ---
 
@@ -149,6 +147,22 @@ Singularity hub: [here](https://cloud.sylabs.io/library)
 
 ---
 
+#### Mixed user configurations for Shaheen and Ibex
+
+Shaheen and Ibex share the same user accounts and the same user configurations. Once you have access to both systems you can login with the same account, and the home directory will be shared.
+So it's not a good idea to put things under `$HOME`. However, I always want to add some specific `PATH` or environment variables, which should only work for Shaheen or Ibex.
+
+It's highly encouraged to put all data and code in `scratch` or `project` partition, and these are totally different across these two systems.
+
+|System|scratch path|project path|
+|:----:|:----------:|:----------:|
+|Shaheen|/scratch/$USERNAME|/project/$PROJECT\_ID|
+|Ibex|/ibex/scratch/$USERNAME||
+
+In terms of user specific configurations, `$HOME/.bashrc` and `$HOME/.profile` will affect two systems. Therefore for every new configuration item you should use `if then else fi` statement to make it work on different systems.
+
+This design is good for user login, they only need one credential to login, but we also need to know that Shaheen and Ibex are totally different systems.
+
 ## 2. Cray or Slurm applicable
 
 ---
@@ -164,9 +178,9 @@ By default files on Shaheen has stripe `1`, which is good if you don't share the
 How to compute stripe count :
 
     a. if the file is 90GB, the square root is 9.5, so use at least 9
-
+    
     b. if using 64 MPI processes for parallel I/O, use stripe count less than 64
-
+    
     c. maximum stripe count on Shaheen-II is 144
 
 ---
